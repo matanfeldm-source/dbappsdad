@@ -1,0 +1,165 @@
+.date-timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  direction: rtl;
+}
+
+.vis-timeline-container {
+  flex: 1;
+  width: 100%;
+  min-height: 450px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  overflow: visible;
+  position: relative;
+  touch-action: pan-y pinch-zoom;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Timeline event styling */
+.timeline-event-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+}
+
+.timeline-event-icon {
+  font-size: 1.2rem;
+}
+
+.timeline-event-title {
+  font-size: 0.875rem;
+}
+
+/* Override vis-timeline default styles for RTL */
+.vis-timeline {
+  direction: rtl;
+  font-family: inherit;
+}
+
+.vis-item {
+  border-radius: 20px;
+  font-size: 0.875rem;
+  padding: 0;
+  border-width: 2px;
+  cursor: pointer !important;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto !important;
+}
+
+.vis-item:hover {
+  transform: scale(1.15);
+  z-index: 1000 !important;
+  transition: transform 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
+.vis-item.vis-selected {
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.6);
+  border-width: 3px;
+  z-index: 1000;
+}
+
+.vis-item.vis-point {
+  border-radius: 50%;
+  width: 40px !important;
+  height: 40px !important;
+  border-width: 3px;
+}
+
+/* Event type specific styles */
+.vis-item.event-call {
+  background-color: #3498db !important;
+  border-color: #3498db !important;
+}
+
+.vis-item.event-installation {
+  background-color: #27ae60 !important;
+  border-color: #27ae60 !important;
+}
+
+.vis-item.event-visit {
+  background-color: #f39c12 !important;
+  border-color: #f39c12 !important;
+}
+
+.vis-item.event-website {
+  background-color: #9b59b6 !important;
+  border-color: #9b59b6 !important;
+}
+
+.vis-item.event-digital {
+  background-color: #e91e63 !important;
+  border-color: #e91e63 !important;
+}
+
+/* Timeline axis styling */
+.vis-time-axis {
+  direction: rtl;
+}
+
+.vis-text {
+  direction: rtl;
+  text-align: right;
+}
+
+.vis-labelset .vis-label {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Timeline navigation controls */
+.vis-foreground {
+  direction: rtl;
+}
+
+.vis-current-time {
+  background-color: rgba(231, 76, 60, 0.3);
+}
+
+/* Tooltip styling */
+.vis-item.vis-selected .vis-item-content {
+  font-weight: 600;
+}
+
+/* Zoom controls area */
+.vis-timeline {
+  border: none;
+}
+
+.vis-panel.vis-center,
+.vis-panel.vis-left,
+.vis-panel.vis-right,
+.vis-panel.vis-top,
+.vis-panel.vis-bottom {
+  border-color: #e0e0e0;
+}
+
+.vis-panel.vis-left {
+  direction: rtl;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .vis-item.vis-point {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .timeline-event-content {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .timeline-event-icon {
+    font-size: 1rem;
+  }
+}

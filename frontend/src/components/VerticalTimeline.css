@@ -1,0 +1,347 @@
+.timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.timeline-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  flex-direction: row-reverse;
+}
+
+.timeline-control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-direction: row-reverse;
+}
+
+.timeline-control-btn {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.timeline-control-btn:hover:not(:disabled) {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.timeline-control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-level {
+  min-width: 3rem;
+  text-align: center;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.timeline-date-range {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: row-reverse;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.timeline-event-count {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.timeline-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 1rem;
+  position: relative;
+}
+
+.vertical-timeline {
+  position: relative;
+  padding: 2rem 0;
+  min-height: 100%;
+  width: 100%;
+}
+
+.vertical-timeline::before {
+  content: '';
+  position: absolute;
+  right: 2rem;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #3498db, #e0e0e0);
+  z-index: 1;
+}
+
+.timeline-item {
+  position: relative;
+  padding-right: 5rem;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  width: 100%;
+}
+
+.timeline-item:hover {
+  transform: translateX(-5px);
+  opacity: 0.9;
+}
+
+.timeline-marker {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.marker-shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.marker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.timeline-item:hover .marker-shape {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Circle shape */
+.marker-circle {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+}
+
+/* Square shape */
+.marker-square {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 4px;
+  transform: rotate(45deg);
+}
+
+.marker-square .marker-icon {
+  transform: rotate(-45deg);
+}
+
+/* Triangle shape */
+.marker-triangle {
+  width: 0;
+  height: 0;
+  border-left: 1.5rem solid transparent;
+  border-right: 1.5rem solid transparent;
+  border-bottom: 2.6rem solid;
+  background: transparent !important;
+  position: relative;
+}
+
+.marker-triangle .marker-icon {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  color: white;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Diamond shape */
+.marker-diamond {
+  width: 3rem;
+  height: 3rem;
+  transform: rotate(45deg);
+  border-radius: 4px;
+}
+
+.marker-diamond .marker-icon {
+  transform: rotate(-45deg);
+}
+
+/* Star shape */
+.marker-star {
+  width: 3rem;
+  height: 3rem;
+  clip-path: polygon(
+    50% 0%, 61% 35%, 98% 35%, 68% 57%,
+    79% 91%, 50% 70%, 21% 91%, 32% 57%,
+    2% 35%, 39% 35%
+  );
+}
+
+.timeline-content {
+  background: white;
+  border: 2px solid var(--event-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.timeline-item:hover .timeline-content {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: var(--event-color);
+  border-width: 3px;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+
+.timeline-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+  min-width: 200px;
+  text-align: right;
+}
+
+.timeline-date-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.timeline-date {
+  color: #666;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.timeline-time {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.timeline-description {
+  margin: 0.75rem 0;
+  color: #555;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.timeline-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+  flex-direction: row-reverse;
+}
+
+.timeline-status,
+.timeline-duration,
+.timeline-channel {
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.timeline-status {
+  color: var(--event-color);
+  background: rgba(var(--event-color-rgb), 0.1);
+  font-weight: 500;
+}
+
+/* Scrollbar styling */
+.timeline-scroll-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .vertical-timeline::before {
+    right: 1.5rem;
+  }
+
+  .timeline-item {
+    padding-right: 4rem;
+  }
+
+  .marker-circle,
+  .marker-square,
+  .marker-diamond,
+  .marker-star {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .marker-triangle {
+    border-left-width: 1.25rem;
+    border-right-width: 1.25rem;
+    border-bottom-width: 2.2rem;
+  }
+
+  .timeline-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timeline-control-group {
+    justify-content: center;
+  }
+}
+

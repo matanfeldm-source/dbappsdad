@@ -1,0 +1,18 @@
+{
+  "name": "customer-journey-app",
+  "version": "1.0.0",
+  "description": "Interactive customer journey visualization app for home appliance clients",
+  "main": "backend_python/main.py",
+  "scripts": {
+    "start": "uvicorn main:app --host 0.0.0.0 --port 3000"
+  },
+  "requirements": "backend_python/requirements.txt",
+  "databricks": {
+    "runtime": "python3.9",
+    "port": 3000,
+    "environment": {
+      "PYTHONUNBUFFERED": "1"
+    }
+  }
+}
+

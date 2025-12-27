@@ -1,0 +1,342 @@
+.technician-map-page {
+  padding: 0;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.technician-map-page h1 {
+  color: var(--text-primary);
+  margin-bottom: 2.5rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+}
+
+.map-controls {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  flex-direction: row-reverse;
+  animation: slideIn 0.6s ease-out;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-buttons button {
+  padding: 0.75rem 1.75rem;
+  border: 2px solid var(--primary-color);
+  background: white;
+  color: var(--primary-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-buttons button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  width: 0;
+  height: 0;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  transform: translate(50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  z-index: -1;
+}
+
+.filter-buttons button:hover {
+  color: white;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.filter-buttons button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.filter-buttons button.active {
+  background: var(--primary-gradient);
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-md);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.legend-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-fast);
+}
+
+.legend-icon:hover {
+  transform: scale(1.2);
+  box-shadow: var(--shadow-lg);
+}
+
+.legend-note {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.map-container {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  animation: slideIn 0.6s ease-out 0.2s both;
+}
+
+.no-visits {
+  text-align: center;
+  padding: 4rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.popup-content {
+  min-width: 220px;
+  padding: 0.5rem 0;
+}
+
+.popup-content h3 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+}
+
+.popup-content p {
+  margin: 0.75rem 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.popup-content strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.technician-summary {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  animation: slideIn 0.6s ease-out 0.4s both;
+}
+
+.technician-summary h2 {
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.technician-summary h2::before {
+  content: '';
+  width: 4px;
+  height: 2rem;
+  background: var(--primary-gradient);
+  border-radius: 2px;
+}
+
+.technician-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.technician-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  border-right: 4px solid var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.technician-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-gradient);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.technician-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-xl);
+  border-right-color: transparent;
+}
+
+.technician-card:hover::before {
+  opacity: 0.05;
+}
+
+.technician-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.technician-card h3 {
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.technician-card p {
+  color: var(--text-secondary);
+  margin: 0.75rem 0;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.technician-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0 0;
+}
+
+.technician-card li {
+  padding: 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition-fast);
+  padding-right: 1rem;
+  position: relative;
+}
+
+.technician-card li::before {
+  content: '▸';
+  position: absolute;
+  right: 0;
+  color: var(--primary-color);
+  transition: transform 0.2s ease;
+}
+
+.technician-card li:hover {
+  padding-right: 1.5rem;
+  color: var(--primary-color);
+}
+
+.technician-card li:hover::before {
+  transform: translateX(-4px);
+}
+
+.technician-card li:last-child {
+  border-bottom: none;
+}
+
+.loading {
+  text-align: center;
+  padding: 4rem;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.loading::after {
+  content: '...';
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@media (max-width: 1024px) {
+  .technician-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .technician-map-page h1 {
+    font-size: 2rem;
+  }
+  
+  .map-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-buttons {
+    justify-content: center;
+  }
+  
+  .legend {
+    justify-content: center;
+  }
+  
+  .technician-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .technician-summary {
+    padding: 1.5rem;
+  }
+}

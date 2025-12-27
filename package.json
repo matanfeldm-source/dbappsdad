@@ -1,0 +1,19 @@
+{
+  "name": "customer-journey-app",
+  "version": "1.0.0",
+  "description": "Interactive customer journey visualization app for Databricks",
+  "main": "backend/server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend_python && python -m uvicorn main:app --reload --port 3000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend_python && pip install -r requirements.txt && cd ../frontend && npm install"
+  },
+  "keywords": ["databricks", "customer-journey", "visualization"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+
