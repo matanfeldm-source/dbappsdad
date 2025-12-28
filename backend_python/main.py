@@ -25,11 +25,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Include routers - these must be registered before the catch-all route
 app.include_router(customers.router, prefix="/api/customers", tags=["customers"])
 app.include_router(journey.router, prefix="/api/journey", tags=["journey"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(technicians.router, prefix="/api/technicians", tags=["technicians"])
+
+# Add a middleware to log all incoming requests for debugging
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"DEBUG: Incoming request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    print(f"DEBUG: Response status: {response.status_code}")
+    return response
 
 @app.get("/api/health")
 async def health_check():
@@ -58,8 +66,10 @@ if frontend_available:
     @app.get("/{full_path:path}")
     async def serve_frontend(request: Request, full_path: str):
         # Don't serve frontend for API routes (shouldn't hit here due to route ordering, but be safe)
+        print(f"DEBUG: Catch-all route matched: {full_path}, URL: {request.url}")
         if full_path.startswith("api/"):
             from fastapi.responses import JSONResponse
+            print(f"DEBUG: Catch-all route returning 404 for API path: {full_path}")
             return JSONResponse(status_code=404, content={"error": "API endpoint not found"})
         index_file = frontend_dist / "index.html"
         if index_file.exists():

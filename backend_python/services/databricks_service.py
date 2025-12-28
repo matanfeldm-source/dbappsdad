@@ -186,6 +186,7 @@ class DatabricksService:
     async def get_all_customers(self, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get all customers with summaries"""
         if self.use_mock_data:
+            print("DEBUG: get_all_customers using mock data (use_mock_data=True)")
             return MOCK_CUSTOMERS
         
         query = """
@@ -203,26 +204,44 @@ class DatabricksService:
         ORDER BY c.customer_id
         """
         
-        results = await self._execute_query(query, user_token=user_token)
+        print(f"DEBUG: get_all_customers executing query with user_token present: {user_token is not None}")
+        try:
+            results = await self._execute_query(query, user_token=user_token)
+            print(f"DEBUG: get_all_customers query returned {len(results)} results, use_mock_data={self.use_mock_data}")
+        except Exception as e:
+            print(f"ERROR: Exception in get_all_customers query execution: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall back to mock data on any exception
+            return MOCK_CUSTOMERS
         
         # If we fell back to mock data, return mock data
         if self.use_mock_data or not results:
+            print("DEBUG: get_all_customers falling back to mock data")
             return MOCK_CUSTOMERS
         
         # Convert to match mock data format
         customers = []
-        for row in results:
-            customer = {
-                "customer_id": row["customer_id"],
-                "name": row["name"],
-                "email": row.get("email"),
-                "phone": row.get("phone"),
-                "status": row["status"],
-                "main_category": row.get("main_category"),
-                "ai_summary": row.get("ai_summary", ""),
-                "updated_at": row.get("updated_at", datetime.now().isoformat())
-            }
-            customers.append(customer)
+        try:
+            for row in results:
+                customer = {
+                    "customer_id": row["customer_id"],
+                    "name": row["name"],
+                    "email": row.get("email"),
+                    "phone": row.get("phone"),
+                    "status": row["status"],
+                    "main_category": row.get("main_category"),
+                    "ai_summary": row.get("ai_summary", ""),
+                    "updated_at": row.get("updated_at", datetime.now().isoformat())
+                }
+                customers.append(customer)
+            print(f"DEBUG: get_all_customers returning {len(customers)} customers")
+        except Exception as e:
+            print(f"ERROR: Exception converting results to customers: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall back to mock data on conversion error
+            return MOCK_CUSTOMERS
         
         return customers
     
