@@ -1,7 +1,8 @@
 import os
+import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
-from databricks import sql
+from concurrent.futures import ThreadPoolExecutor
 from .mock_data_service import (
     MOCK_CUSTOMERS,
     MOCK_JOURNEY,
@@ -24,14 +25,15 @@ class DatabricksService:
     def __init__(self):
         self.use_mock_data = USE_MOCK_DATA
         self.connection = None
+        self._executor = ThreadPoolExecutor(max_workers=5)
         if self.use_mock_data:
             print("Using mock data mode - configure DATABRICKS_SERVER_HOSTNAME to connect to Databricks")
-        else:
-            self._init_connection()
     
     def _init_connection(self):
-        """Initialize Databricks SQL connection"""
+        """Initialize Databricks SQL connection (synchronous, run in thread pool)"""
         try:
+            from databricks import sql
+            
             server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME")
             http_path = os.getenv("DATABRICKS_HTTP_PATH")
             access_token = os.getenv("DATABRICKS_TOKEN")
@@ -45,10 +47,12 @@ class DatabricksService:
                 catalog=catalog,
                 schema=schema
             )
+            return True
         except Exception as e:
             print(f"Warning: Failed to initialize Databricks connection: {e}")
             print("Falling back to mock data mode")
             self.use_mock_data = True
+            return False
     
     def _get_connection(self):
         """Get or create Databricks connection"""
@@ -58,8 +62,8 @@ class DatabricksService:
             self._init_connection()
         return self.connection
     
-    def _execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        """Execute a SQL query and return results as list of dictionaries"""
+    def _execute_query_sync(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Execute a SQL query synchronously (to be run in thread pool)"""
         if self.use_mock_data:
             return []
         
@@ -107,7 +111,29 @@ class DatabricksService:
             return results
         except Exception as e:
             print(f"Error executing query: {e}")
-            raise
+            # On error, fall back to mock data
+            self.use_mock_data = True
+            return []
+    
+    async def _execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Execute a SQL query asynchronously using thread pool"""
+        if self.use_mock_data:
+            return []
+        
+        loop = asyncio.get_event_loop()
+        try:
+            results = await loop.run_in_executor(
+                self._executor,
+                self._execute_query_sync,
+                query,
+                params
+            )
+            return results
+        except Exception as e:
+            print(f"Error in async query execution: {e}")
+            # Fall back to mock data on error
+            self.use_mock_data = True
+            return []
     
     async def get_all_customers(self) -> List[Dict[str, Any]]:
         """Get all customers with summaries"""
@@ -129,7 +155,11 @@ class DatabricksService:
         ORDER BY c.customer_id
         """
         
-        results = self._execute_query(query)
+        results = await self._execute_query(query)
+        
+        # If we fell back to mock data, return mock data
+        if self.use_mock_data or not results:
+            return MOCK_CUSTOMERS
         
         # Convert to match mock data format
         customers = []
@@ -175,7 +205,7 @@ class DatabricksService:
         WHERE c.customer_id = ?
         """
         
-        results = self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id})
         
         if not results:
             return None
@@ -213,7 +243,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY call_timestamp DESC
         """
-        calls = self._execute_query(calls_query, {"customer_id": customer_id})
+        calls = await self._execute_query(calls_query, {"customer_id": customer_id})
         for call in calls:
             events.append({
                 "event_type": "call",
@@ -239,7 +269,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY installation_date DESC
         """
-        installs = self._execute_query(installs_query, {"customer_id": customer_id})
+        installs = await self._execute_query(installs_query, {"customer_id": customer_id})
         for inst in installs:
             events.append({
                 "event_type": "installation",
@@ -264,7 +294,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY visit_date DESC
         """
-        visits = self._execute_query(visits_query, {"customer_id": customer_id})
+        visits = await self._execute_query(visits_query, {"customer_id": customer_id})
         for visit in visits:
             events.append({
                 "event_type": "visit",
@@ -287,7 +317,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY visit_timestamp DESC
         """
-        web_visits = self._execute_query(web_query, {"customer_id": customer_id})
+        web_visits = await self._execute_query(web_query, {"customer_id": customer_id})
         for web in web_visits:
             events.append({
                 "event_type": "website",
@@ -312,7 +342,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY interaction_timestamp DESC
         """
-        digitals = self._execute_query(digital_query, {"customer_id": customer_id})
+        digitals = await self._execute_query(digital_query, {"customer_id": customer_id})
         for dig in digitals:
             events.append({
                 "event_type": "digital",
@@ -352,7 +382,7 @@ class DatabricksService:
         WHERE customer_id = ?
         """
         
-        results = self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id})
         
         if not results:
             return None
@@ -389,7 +419,7 @@ class DatabricksService:
         LIMIT 1
         """
         
-        results = self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id})
         
         if not results:
             return None
@@ -414,7 +444,7 @@ class DatabricksService:
         FROM customer_calls
         WHERE resolution_status = 'open'
         """
-        open_calls_result = self._execute_query(open_calls_query)
+        open_calls_result = await self._execute_query(open_calls_query)
         open_calls = open_calls_result[0]["open_calls"] if open_calls_result else 0
         
         # Count customers by status
@@ -425,7 +455,7 @@ class DatabricksService:
         FROM customers
         GROUP BY status
         """
-        status_results = self._execute_query(status_query)
+        status_results = await self._execute_query(status_query)
         
         status_counts = {"low": 0, "normal": 0, "urgent": 0}
         for row in status_results:
@@ -455,7 +485,7 @@ class DatabricksService:
         ORDER BY hour
         """
         
-        results = self._execute_query(query)
+        results = await self._execute_query(query)
         
         # Create a map of hour -> count
         hour_counts = {row["hour"]: row["call_count"] for row in results}
@@ -485,7 +515,7 @@ class DatabricksService:
         ORDER BY date
         """
         
-        results = self._execute_query(query)
+        results = await self._execute_query(query)
         
         # Convert date objects to ISO format strings
         trends = []
@@ -530,7 +560,7 @@ class DatabricksService:
         ORDER BY v.visit_date
         """
         
-        results = self._execute_query(query)
+        results = await self._execute_query(query)
         
         visits = []
         for row in results:
