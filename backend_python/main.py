@@ -10,6 +10,7 @@ backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
 from routers import customers, journey, dashboard, technicians
+from services.databricks_service import DatabricksService
 import uvicorn
 import os
 from datetime import datetime
@@ -25,7 +26,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create a shared service instance
+databricks_service = DatabricksService()
+
 # Include routers - these must be registered before the catch-all route
+# Note: For the customers root endpoint, we define it directly on the app to avoid router root path issues
+@app.get("/api/customers", tags=["customers"])
+@app.get("/api/customers/", tags=["customers"])
+async def get_all_customers_direct(request: Request):
+    """Get all customers with summaries - defined directly to avoid router root path issues"""
+    try:
+        print(f"DEBUG: get_all_customers_direct called, URL: {request.url}")
+        user_token = request.headers.get("x-forwarded-access-token")
+        print(f"DEBUG: user_token present: {user_token is not None}")
+        customers_list = await databricks_service.get_all_customers(user_token=user_token)
+        print(f"DEBUG: get_all_customers_direct returning {len(customers_list)} customers")
+        return customers_list
+    except Exception as e:
+        print(f"ERROR: Exception in get_all_customers_direct: {e}")
+        import traceback
+        traceback.print_exc()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Include routers for other endpoints
 app.include_router(customers.router, prefix="/api/customers", tags=["customers"])
 app.include_router(journey.router, prefix="/api/journey", tags=["journey"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
