@@ -1,17 +1,19 @@
 #!/bin/bash
 set -e
 
-# Get the directory where this script is located
+# Get the directory where this script is located (app root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Change to the backend_python directory
-cd "${SCRIPT_DIR}/backend_python" || cd ./backend_python || { echo "Error: Cannot find backend_python directory"; exit 1; }
+# Change to backend_python directory where main.py is located
+cd "${SCRIPT_DIR}/backend_python"
 
 # Set default port if not provided
 export PORT=${PORT:-3000}
 
 # Start the application with gunicorn
+# Use --chdir to ensure we're in the right directory for imports
 exec gunicorn main:app \
+  --chdir "${SCRIPT_DIR}/backend_python" \
   --bind 0.0.0.0:${PORT} \
   --workers 2 \
   --worker-class uvicorn.workers.UvicornWorker \

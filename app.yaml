@@ -1,0 +1,7 @@
+command: ./entrypoint.sh
+env:
+  - name: PORT
+    value: "3000"
+  - name: PYTHONUNBUFFERED
+    value: "1"
+
