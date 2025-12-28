@@ -54,6 +54,10 @@ const Overview = () => {
       header: 'שם',
     },
     {
+      accessorKey: 'main_category',
+      header: 'קטגוריה ראשית',
+    },
+    {
       accessorKey: 'ai_summary',
       header: 'סיכום AI',
       cell: (info) => {

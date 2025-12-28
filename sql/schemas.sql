@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS customers (
     address STRING,
     city STRING,
     status STRING NOT NULL, -- 'low', 'normal', 'urgent'
+    main_category STRING, -- 'refrigerator', 'washing machine', 'oven', 'dishwasher', etc.
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 ) USING DELTA;
@@ -116,11 +117,11 @@ CREATE INDEX IF NOT EXISTS idx_digital_customer ON digital_interactions(customer
 
 -- Sample Customers
 INSERT INTO customers VALUES
-('CUST001', 'John Smith', 'john.smith@email.com', '+1234567890', '123 Main St', 'New York', 'normal', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-('CUST002', 'Sarah Johnson', 'sarah.j@email.com', '+1234567891', '456 Oak Ave', 'Los Angeles', 'urgent', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-('CUST003', 'Michael Brown', 'm.brown@email.com', '+1234567892', '789 Pine Rd', 'Chicago', 'low', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-('CUST004', 'Emily Davis', 'emily.davis@email.com', '+1234567893', '321 Elm St', 'Houston', 'normal', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-('CUST005', 'David Wilson', 'd.wilson@email.com', '+1234567894', '654 Maple Dr', 'Phoenix', 'urgent', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
+('CUST001', 'John Smith', 'john.smith@email.com', '+1234567890', '123 Main St', 'New York', 'normal', 'refrigerator', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
+('CUST002', 'Sarah Johnson', 'sarah.j@email.com', '+1234567891', '456 Oak Ave', 'Los Angeles', 'urgent', 'washing machine', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
+('CUST003', 'Michael Brown', 'm.brown@email.com', '+1234567892', '789 Pine Rd', 'Chicago', 'low', 'washing machine', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
+('CUST004', 'Emily Davis', 'emily.davis@email.com', '+1234567893', '321 Elm St', 'Houston', 'normal', 'oven', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
+('CUST005', 'David Wilson', 'd.wilson@email.com', '+1234567894', '654 Maple Dr', 'Phoenix', 'urgent', 'dishwasher', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
 
 -- Sample Customer Calls
 INSERT INTO customer_calls VALUES
