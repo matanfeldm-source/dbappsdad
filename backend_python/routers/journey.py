@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 import sys
 from pathlib import Path
 
@@ -11,10 +11,11 @@ router = APIRouter()
 service = DatabricksService()
 
 @router.get("/{customer_id}")
-async def get_customer_journey(customer_id: str):
+async def get_customer_journey(customer_id: str, request: Request):
     """Get customer journey timeline events"""
     try:
-        journey = await service.get_customer_journey(customer_id)
+        user_token = request.headers.get("x-forwarded-access-token")
+        journey = await service.get_customer_journey(customer_id, user_token=user_token)
         return journey
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

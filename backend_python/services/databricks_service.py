@@ -14,9 +14,9 @@ from .mock_data_service import (
 )
 
 # Check if Databricks credentials are configured
+# For Databricks Apps, we need DATABRICKS_HTTP_PATH (host comes from Config())
 USE_MOCK_DATA = (
-    not os.getenv("DATABRICKS_SERVER_HOSTNAME")
-    or os.getenv("DATABRICKS_SERVER_HOSTNAME") == "your-workspace.cloud.databricks.com"
+    not os.getenv("DATABRICKS_HTTP_PATH")
 )
 
 class DatabricksService:
@@ -24,51 +24,63 @@ class DatabricksService:
     
     def __init__(self):
         self.use_mock_data = USE_MOCK_DATA
-        self.connection = None
         self._executor = ThreadPoolExecutor(max_workers=5)
         if self.use_mock_data:
-            print("Using mock data mode - configure DATABRICKS_SERVER_HOSTNAME to connect to Databricks")
+            print("Using mock data mode - configure DATABRICKS_HTTP_PATH to connect to Databricks")
     
-    def _init_connection(self):
-        """Initialize Databricks SQL connection (synchronous, run in thread pool)"""
+    def _init_connection(self, user_token: Optional[str] = None):
+        """Initialize Databricks SQL connection using sql.connect with userToken from x-forwarded-access-token header (synchronous, run in thread pool)"""
         try:
             from databricks import sql
+            from databricks.sdk.core import Config
             
-            server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME")
+            # Use Config to get the host (workspace hostname)
+            cfg = Config()
+            server_hostname = cfg.host if cfg.host else os.getenv("DATABRICKS_SERVER_HOSTNAME")
+            
+            # Get HTTP path from environment variable
             http_path = os.getenv("DATABRICKS_HTTP_PATH")
-            access_token = os.getenv("DATABRICKS_TOKEN")
-            catalog = os.getenv("DATABRICKS_CATALOG", "default")
-            schema = os.getenv("DATABRICKS_SCHEMA", "default")
             
-            self.connection = sql.connect(
+            # Validate that we have required connection parameters
+            if not server_hostname or not http_path:
+                print("Warning: Missing required Databricks connection parameters")
+                print("Required: DATABRICKS_HTTP_PATH (and DATABRICKS_SERVER_HOSTNAME if Config().host is not available)")
+                return None
+            
+            # Use token from header (x-forwarded-access-token) - this is required for Databricks Apps
+            token = user_token
+            if not token:
+                print("Warning: No token provided from x-forwarded-access-token header")
+                return None
+            
+            # Create connection with userToken from x-forwarded-access-token header
+            connection = sql.connect(
                 server_hostname=server_hostname,
                 http_path=http_path,
-                access_token=access_token,
-                catalog=catalog,
-                schema=schema
+                access_token=token,  # Token from x-forwarded-access-token header
             )
-            return True
+            return connection
         except Exception as e:
-            print(f"Warning: Failed to initialize Databricks connection: {e}")
-            print("Falling back to mock data mode")
-            self.use_mock_data = True
-            return False
+            error_msg = str(e)
+            print(f"Warning: Failed to initialize Databricks connection: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return None
     
-    def _get_connection(self):
-        """Get or create Databricks connection"""
+    def _get_connection(self, user_token: Optional[str] = None):
+        """Get or create Databricks connection for this request (connections are per-request due to user tokens)"""
         if self.use_mock_data:
             return None
-        if self.connection is None:
-            self._init_connection()
-        return self.connection
+        # Always create a new connection per request since user_token may differ per request
+        return self._init_connection(user_token) if user_token else None
     
-    def _execute_query_sync(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def _execute_query_sync(self, query: str, params: Optional[Dict[str, Any]] = None, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Execute a SQL query synchronously (to be run in thread pool)"""
         if self.use_mock_data:
             return []
         
-        conn = self._get_connection()
-        if conn is None:
+        conn = self._get_connection(user_token)
+        if conn is None or not conn:
             return []
         
         try:
@@ -108,14 +120,19 @@ class DatabricksService:
                 results.append(row_dict)
             
             cursor.close()
+            conn.close()  # Close connection after query (per-request connections)
             return results
         except Exception as e:
             print(f"Error executing query: {e}")
-            # On error, fall back to mock data
-            self.use_mock_data = True
+            # Close connection on error
+            try:
+                if conn:
+                    conn.close()
+            except:
+                pass
             return []
     
-    async def _execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    async def _execute_query(self, query: str, params: Optional[Dict[str, Any]] = None, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Execute a SQL query asynchronously using thread pool"""
         if self.use_mock_data:
             return []
@@ -126,7 +143,8 @@ class DatabricksService:
                 self._executor,
                 self._execute_query_sync,
                 query,
-                params
+                params,
+                user_token
             )
             return results
         except Exception as e:
@@ -135,7 +153,7 @@ class DatabricksService:
             self.use_mock_data = True
             return []
     
-    async def get_all_customers(self) -> List[Dict[str, Any]]:
+    async def get_all_customers(self, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get all customers with summaries"""
         if self.use_mock_data:
             return MOCK_CUSTOMERS
@@ -155,7 +173,7 @@ class DatabricksService:
         ORDER BY c.customer_id
         """
         
-        results = await self._execute_query(query)
+        results = await self._execute_query(query, user_token=user_token)
         
         # If we fell back to mock data, return mock data
         if self.use_mock_data or not results:
@@ -178,7 +196,7 @@ class DatabricksService:
         
         return customers
     
-    async def get_customer_by_id(self, customer_id: str) -> Optional[Dict[str, Any]]:
+    async def get_customer_by_id(self, customer_id: str, user_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get single customer details"""
         if self.use_mock_data:
             customer = next((c for c in MOCK_CUSTOMERS if c["customer_id"] == customer_id), None)
@@ -223,7 +241,7 @@ class DatabricksService:
             "summary_generated_at": row.get("summary_generated_at", datetime.now().isoformat())
         }
     
-    async def get_customer_journey(self, customer_id: str) -> List[Dict[str, Any]]:
+    async def get_customer_journey(self, customer_id: str, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get customer journey timeline events"""
         if self.use_mock_data:
             return MOCK_JOURNEY.get(customer_id, [])
@@ -243,7 +261,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY call_timestamp DESC
         """
-        calls = await self._execute_query(calls_query, {"customer_id": customer_id})
+        calls = await self._execute_query(calls_query, {"customer_id": customer_id}, user_token=user_token)
         for call in calls:
             events.append({
                 "event_type": "call",
@@ -269,7 +287,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY installation_date DESC
         """
-        installs = await self._execute_query(installs_query, {"customer_id": customer_id})
+        installs = await self._execute_query(installs_query, {"customer_id": customer_id}, user_token=user_token)
         for inst in installs:
             events.append({
                 "event_type": "installation",
@@ -294,7 +312,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY visit_date DESC
         """
-        visits = await self._execute_query(visits_query, {"customer_id": customer_id})
+        visits = await self._execute_query(visits_query, {"customer_id": customer_id}, user_token=user_token)
         for visit in visits:
             events.append({
                 "event_type": "visit",
@@ -317,7 +335,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY visit_timestamp DESC
         """
-        web_visits = await self._execute_query(web_query, {"customer_id": customer_id})
+        web_visits = await self._execute_query(web_query, {"customer_id": customer_id}, user_token=user_token)
         for web in web_visits:
             events.append({
                 "event_type": "website",
@@ -342,7 +360,7 @@ class DatabricksService:
         WHERE customer_id = ?
         ORDER BY interaction_timestamp DESC
         """
-        digitals = await self._execute_query(digital_query, {"customer_id": customer_id})
+        digitals = await self._execute_query(digital_query, {"customer_id": customer_id}, user_token=user_token)
         for dig in digitals:
             events.append({
                 "event_type": "digital",
@@ -361,7 +379,7 @@ class DatabricksService:
         
         return events
     
-    async def get_customer_summary(self, customer_id: str) -> Optional[Dict[str, Any]]:
+    async def get_customer_summary(self, customer_id: str, user_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get customer AI summary"""
         if self.use_mock_data:
             customer = next((c for c in MOCK_CUSTOMERS if c["customer_id"] == customer_id), None)
@@ -394,7 +412,7 @@ class DatabricksService:
             "model_version": row.get("model_version", "v1.0")
         }
     
-    async def get_next_best_action(self, customer_id: str) -> Optional[Dict[str, Any]]:
+    async def get_next_best_action(self, customer_id: str, user_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get next best action for customer"""
         if self.use_mock_data:
             return MOCK_NEXT_ACTIONS.get(customer_id)
@@ -470,7 +488,7 @@ class DatabricksService:
             "urgent_customers": status_counts["urgent"]
         }
     
-    async def get_hourly_trends(self) -> List[Dict[str, Any]]:
+    async def get_hourly_trends(self, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get hourly call trends (last 24 hours)"""
         if self.use_mock_data:
             return MOCK_HOURLY_TRENDS
@@ -485,7 +503,7 @@ class DatabricksService:
         ORDER BY hour
         """
         
-        results = await self._execute_query(query)
+        results = await self._execute_query(query, user_token=user_token)
         
         # Create a map of hour -> count
         hour_counts = {row["hour"]: row["call_count"] for row in results}
@@ -500,7 +518,7 @@ class DatabricksService:
         
         return trends
     
-    async def get_daily_trends(self) -> List[Dict[str, Any]]:
+    async def get_daily_trends(self, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get daily call trends (last 30 days)"""
         if self.use_mock_data:
             return MOCK_DAILY_TRENDS
@@ -515,7 +533,7 @@ class DatabricksService:
         ORDER BY date
         """
         
-        results = await self._execute_query(query)
+        results = await self._execute_query(query, user_token=user_token)
         
         # Convert date objects to ISO format strings
         trends = []
@@ -535,7 +553,7 @@ class DatabricksService:
         
         return trends
     
-    async def get_technician_visits(self) -> List[Dict[str, Any]]:
+    async def get_technician_visits(self, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get technician visits with coordinates"""
         if self.use_mock_data:
             return MOCK_VISITS
@@ -560,7 +578,7 @@ class DatabricksService:
         ORDER BY v.visit_date
         """
         
-        results = await self._execute_query(query)
+        results = await self._execute_query(query, user_token=user_token)
         
         visits = []
         for row in results:
