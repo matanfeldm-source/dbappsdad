@@ -25,33 +25,44 @@ class DatabricksService:
     def __init__(self):
         self.use_mock_data = USE_MOCK_DATA
         self._executor = ThreadPoolExecutor(max_workers=5)
+        # Cache connection parameters (these don't change per request)
+        self._server_hostname = None
+        self._http_path = os.getenv("DATABRICKS_HTTP_PATH")
+        self._catalog = os.getenv("DATABRICKS_CATALOG")
+        self._schema = os.getenv("DATABRICKS_SCHEMA")
+        
         if self.use_mock_data:
             print("Using mock data mode - configure DATABRICKS_HTTP_PATH to connect to Databricks")
+        else:
+            # Get server hostname from Config() at initialization (must be called from main thread)
+            self._server_hostname = self._get_server_hostname()
+            if not self._server_hostname:
+                print("Warning: Could not get server hostname from Config() or DATABRICKS_SERVER_HOSTNAME")
+                print("Falling back to mock data mode")
+                self.use_mock_data = True
     
-    def _init_connection(self, user_token: Optional[str] = None):
-        """Initialize Databricks SQL connection using sql.connect with userToken from x-forwarded-access-token header (synchronous, run in thread pool)"""
+    def _get_server_hostname(self):
+        """Get server hostname from Config or environment variable (called outside thread pool)"""
+        try:
+            from databricks.sdk.core import Config
+            cfg = Config()
+            if cfg.host:
+                return cfg.host
+        except Exception as e:
+            print(f"Warning: Config() failed: {e}, falling back to environment variable")
+        return os.getenv("DATABRICKS_SERVER_HOSTNAME")
+    
+    def _init_connection(self, server_hostname: str, http_path: str, user_token: str, catalog: Optional[str] = None, schema: Optional[str] = None):
+        """Initialize Databricks SQL connection (synchronous, run in thread pool)"""
         try:
             from databricks import sql
-            from databricks.sdk.core import Config
-            
-            # Use Config to get the host (workspace hostname)
-            cfg = Config()
-            server_hostname = cfg.host if cfg.host else os.getenv("DATABRICKS_SERVER_HOSTNAME")
-            
-            # Get HTTP path from environment variable
-            http_path = os.getenv("DATABRICKS_HTTP_PATH")
-            catalog = os.getenv("DATABRICKS_CATALOG")
-            schema = os.getenv("DATABRICKS_SCHEMA")
             
             # Validate that we have required connection parameters
             if not server_hostname or not http_path:
                 print("Warning: Missing required Databricks connection parameters")
-                print("Required: DATABRICKS_HTTP_PATH (and DATABRICKS_SERVER_HOSTNAME if Config().host is not available)")
                 return None
             
-            # Use token from header (x-forwarded-access-token) - this is required for Databricks Apps
-            token = user_token
-            if not token:
+            if not user_token:
                 print("Warning: No token provided from x-forwarded-access-token header")
                 return None
             
@@ -59,7 +70,7 @@ class DatabricksService:
             connection_params = {
                 "server_hostname": server_hostname,
                 "http_path": http_path,
-                "access_token": token,  # Token from x-forwarded-access-token header
+                "access_token": user_token,  # Token from x-forwarded-access-token header
             }
             # Add catalog and schema if provided
             if catalog:
@@ -80,8 +91,14 @@ class DatabricksService:
         """Get or create Databricks connection for this request (connections are per-request due to user tokens)"""
         if self.use_mock_data:
             return None
-        # Always create a new connection per request since user_token may differ per request
-        return self._init_connection(user_token) if user_token else None
+        if not user_token:
+            return None
+        
+        if not self._server_hostname or not self._http_path:
+            return None
+        
+        # Create connection with cached parameters and user token
+        return self._init_connection(self._server_hostname, self._http_path, user_token, self._catalog, self._schema)
     
     def _execute_query_sync(self, query: str, params: Optional[Dict[str, Any]] = None, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Execute a SQL query synchronously (to be run in thread pool)"""
