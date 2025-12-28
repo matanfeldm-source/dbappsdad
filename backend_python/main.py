@@ -37,7 +37,9 @@ async def health_check():
 
 # Serve static files from frontend/dist
 frontend_dist = backend_dir.parent / "frontend" / "dist"
-if frontend_dist.exists():
+frontend_available = frontend_dist.exists()
+
+if frontend_available:
     # Mount static assets (JS, CSS, etc.)
     assets_dir = frontend_dist / "assets"
     if assets_dir.exists():
@@ -55,10 +57,25 @@ if frontend_dist.exists():
     # This catch-all route will only match if no API route matches (since API routes are defined first)
     @app.get("/{full_path:path}")
     async def serve_frontend(request: Request, full_path: str):
+        # Don't serve frontend for API routes (shouldn't hit here due to route ordering, but be safe)
+        if full_path.startswith("api/"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=404, content={"error": "API endpoint not found"})
         index_file = frontend_dist / "index.html"
         if index_file.exists():
             return FileResponse(str(index_file))
         return {"error": "Frontend not found"}
+else:
+    # If frontend doesn't exist, provide a simple root endpoint
+    @app.get("/")
+    async def root():
+        return {
+            "message": "Customer Journey API",
+            "status": "running",
+            "frontend": "not available - frontend/dist directory not found",
+            "api_docs": "/docs",
+            "health": "/api/health"
+        }
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 3000))
