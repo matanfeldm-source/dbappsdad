@@ -14,10 +14,16 @@ service = DatabricksService()
 async def get_dashboard_stats(request: Request):
     """Get dashboard statistics"""
     try:
+        print(f"DEBUG: get_dashboard_stats called, URL: {request.url}")
         user_token = request.headers.get("x-forwarded-access-token")
+        print(f"DEBUG: user_token present: {user_token is not None}")
         stats = await service.get_dashboard_stats(user_token=user_token)
+        print(f"DEBUG: get_dashboard_stats returning stats: {stats}")
         return stats
     except Exception as e:
+        print(f"ERROR: Exception in get_dashboard_stats: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/trends/hourly")

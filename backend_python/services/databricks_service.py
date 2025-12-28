@@ -500,7 +500,7 @@ class DatabricksService:
             "status": row.get("status", "pending")
         }
     
-    async def get_dashboard_stats(self) -> Dict[str, Any]:
+    async def get_dashboard_stats(self, user_token: Optional[str] = None) -> Dict[str, Any]:
         """Get dashboard statistics"""
         if self.use_mock_data:
             return MOCK_STATS
