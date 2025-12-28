@@ -59,7 +59,7 @@ class DatabricksService:
             
             # Validate that we have required connection parameters
             if not server_hostname or not http_path:
-                print("Warning: Missing required Databricks connection parameters")
+                print(f"Warning: Missing required Databricks connection parameters - hostname: {bool(server_hostname)}, http_path: {bool(http_path)}")
                 return None
             
             if not user_token:
@@ -82,7 +82,8 @@ class DatabricksService:
             return connection
         except Exception as e:
             error_msg = str(e)
-            print(f"Warning: Failed to initialize Databricks connection: {error_msg}")
+            print(f"ERROR: Failed to initialize Databricks connection: {error_msg}")
+            print(f"ERROR: Connection params - server_hostname: {server_hostname}, http_path: {http_path}, has_token: {bool(user_token)}, catalog: {catalog}, schema: {schema}")
             import traceback
             traceback.print_exc()
             return None
@@ -105,58 +106,61 @@ class DatabricksService:
         if self.use_mock_data:
             return []
         
-        conn = self._get_connection(user_token)
-        if conn is None or not conn:
-            return []
-        
+        conn = None
         try:
-            cursor = conn.cursor()
-            # For Databricks SQL, replace ? placeholders with parameter values
-            # Since these are simple string IDs from URL paths, using f-strings is acceptable
-            # For production with user input, use proper parameterized queries
-            if params and "?" in query:
-                # Simple parameter substitution for single parameter queries
-                # Escape single quotes in string parameters
-                param_value = list(params.values())[0]
-                if isinstance(param_value, str):
-                    escaped_value = param_value.replace("'", "''")
-                    final_query = query.replace("?", f"'{escaped_value}'", 1)
+            conn = self._get_connection(user_token)
+            if conn is None or not conn:
+                print(f"ERROR: Failed to get connection for query execution")
+                return []
+            
+            with conn.cursor() as cursor:
+                # For Databricks SQL, replace ? placeholders with parameter values
+                # Since these are simple string IDs from URL paths, using f-strings is acceptable
+                # For production with user input, use proper parameterized queries
+                if params and "?" in query:
+                    # Simple parameter substitution for single parameter queries
+                    # Escape single quotes in string parameters
+                    param_value = list(params.values())[0]
+                    if isinstance(param_value, str):
+                        escaped_value = param_value.replace("'", "''")
+                        final_query = query.replace("?", f"'{escaped_value}'", 1)
+                    else:
+                        final_query = query.replace("?", str(param_value), 1)
+                    cursor.execute(final_query)
                 else:
-                    final_query = query.replace("?", str(param_value), 1)
-                cursor.execute(final_query)
-            else:
-                cursor.execute(query)
-            
-            # Get column names
-            columns = [desc[0] for desc in cursor.description] if cursor.description else []
-            
-            # Fetch all rows and convert to list of dictionaries
-            rows = cursor.fetchall()
-            results = []
-            for row in rows:
-                row_dict = {}
-                for i, col in enumerate(columns):
-                    value = row[i]
-                    # Convert datetime objects to ISO format strings
-                    if isinstance(value, datetime):
-                        value = value.isoformat()
-                    elif isinstance(value, (int, float)) and col in ['latitude', 'longitude']:
-                        value = float(value) if value is not None else None
-                    row_dict[col] = value
-                results.append(row_dict)
-            
-            cursor.close()
-            conn.close()  # Close connection after query (per-request connections)
-            return results
+                    cursor.execute(query)
+                
+                # Get column names
+                columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                
+                # Fetch all rows and convert to list of dictionaries
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    row_dict = {}
+                    for i, col in enumerate(columns):
+                        value = row[i]
+                        # Convert datetime objects to ISO format strings
+                        if isinstance(value, datetime):
+                            value = value.isoformat()
+                        elif isinstance(value, (int, float)) and col in ['latitude', 'longitude']:
+                            value = float(value) if value is not None else None
+                        row_dict[col] = value
+                    results.append(row_dict)
+                
+                return results
         except Exception as e:
-            print(f"Error executing query: {e}")
-            # Close connection on error
-            try:
-                if conn:
-                    conn.close()
-            except:
-                pass
+            print(f"ERROR: Error executing query: {e}")
+            import traceback
+            traceback.print_exc()
             return []
+        finally:
+            # Always close connection in finally block
+            if conn:
+                try:
+                    conn.close()
+                except Exception as close_error:
+                    print(f"ERROR: Failed to close connection: {close_error}")
     
     async def _execute_query(self, query: str, params: Optional[Dict[str, Any]] = None, user_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Execute a SQL query asynchronously using thread pool"""
