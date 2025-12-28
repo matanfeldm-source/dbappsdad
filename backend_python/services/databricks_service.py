@@ -40,6 +40,8 @@ class DatabricksService:
             
             # Get HTTP path from environment variable
             http_path = os.getenv("DATABRICKS_HTTP_PATH")
+            catalog = os.getenv("DATABRICKS_CATALOG")
+            schema = os.getenv("DATABRICKS_SCHEMA")
             
             # Validate that we have required connection parameters
             if not server_hostname or not http_path:
@@ -54,11 +56,18 @@ class DatabricksService:
                 return None
             
             # Create connection with userToken from x-forwarded-access-token header
-            connection = sql.connect(
-                server_hostname=server_hostname,
-                http_path=http_path,
-                access_token=token,  # Token from x-forwarded-access-token header
-            )
+            connection_params = {
+                "server_hostname": server_hostname,
+                "http_path": http_path,
+                "access_token": token,  # Token from x-forwarded-access-token header
+            }
+            # Add catalog and schema if provided
+            if catalog:
+                connection_params["catalog"] = catalog
+            if schema:
+                connection_params["schema"] = schema
+            
+            connection = sql.connect(**connection_params)
             return connection
         except Exception as e:
             error_msg = str(e)
@@ -223,7 +232,7 @@ class DatabricksService:
         WHERE c.customer_id = ?
         """
         
-        results = await self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id}, user_token=user_token)
         
         if not results:
             return None
@@ -400,7 +409,7 @@ class DatabricksService:
         WHERE customer_id = ?
         """
         
-        results = await self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id}, user_token=user_token)
         
         if not results:
             return None
@@ -437,7 +446,7 @@ class DatabricksService:
         LIMIT 1
         """
         
-        results = await self._execute_query(query, {"customer_id": customer_id})
+        results = await self._execute_query(query, {"customer_id": customer_id}, user_token=user_token)
         
         if not results:
             return None
@@ -462,7 +471,7 @@ class DatabricksService:
         FROM customer_calls
         WHERE resolution_status = 'open'
         """
-        open_calls_result = await self._execute_query(open_calls_query)
+        open_calls_result = await self._execute_query(open_calls_query, user_token=user_token)
         open_calls = open_calls_result[0]["open_calls"] if open_calls_result else 0
         
         # Count customers by status
@@ -473,7 +482,7 @@ class DatabricksService:
         FROM customers
         GROUP BY status
         """
-        status_results = await self._execute_query(status_query)
+        status_results = await self._execute_query(status_query, user_token=user_token)
         
         status_counts = {"low": 0, "normal": 0, "urgent": 0}
         for row in status_results:
